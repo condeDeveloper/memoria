@@ -1,0 +1,54 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O juiz e o ALCANCE a partir das raizes, que e a definicao de lixo e nao
+      # tem nada de aproximado. Todo coletor daqui e conferido contra ele, e a
+      # conferencia tem DOIS lados que precisam valer juntos: nada alcancavel
+      # foi apagado, e nada inalcancavel sobrou. Um coletor que nunca apaga nada
+      # passa no primeiro e falha no segundo; um que apaga tudo faz o contrario.
+      #
+      # E a conferencia precisa do monte ANTES e DEPOIS. Depois da coleta, um
+      # objeto apagado por engano simplesmente nao existe, e o monte resultante
+      # parece perfeitamente consistente.
+      #
+      # Ha ainda uma terceira conferencia que a contagem de sobreviventes deixa
+      # passar: as LIGACOES. Um coletor que copia objetos precisa consertar todo
+      # ponteiro, e esquecer um produz um monte com os objetos certos e as
+      # ligacoes trocadas.
+      - name: testes
+        run: dotnet test testes/Memoria.Testes/Memoria.Testes.csproj -c Release --nologo -v q
+
+      - name: os coletores em cada carga
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- tabela
+
+      - name: o que a contagem de referencia deixa para tras
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- ciclos
+
+      - name: marca-e-varre contra copiador
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- lixo
+
+      - name: o coletor geracional, com e sem conjunto lembrado
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- geracional
+
+      - name: a memoria que cada um exige
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- memoria
